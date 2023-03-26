@@ -10,3 +10,5 @@
 # EditPad Pro Project File #
 ###################
 *.epp
+
+.DS_Store
