@@ -341,13 +341,13 @@ measure_table = (
 # 	the remaining time.
 
 
-def write_incomplete_bar(tm, bar_data, begin, end):
+def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
 
     if len(bar_data) == 0 and int(begin) == int(end):
         return
 
     if len(bar_data) == 0:  # use DELAY to skip an empty bar
-        print(make_cmd(FMT_DELAY, (end-begin) / 1000.0))
+        tja_contents.append(make_cmd(FMT_DELAY, (end-begin) / 1000.0))
         return
 
     tpb = T_MINUTE / tm["bpm"]
@@ -365,8 +365,9 @@ def write_incomplete_bar(tm, bar_data, begin, end):
             if beat_cnt >= min_beat_cnt and \
                     int(begin + 1.0 * beat_cnt * T_MINUTE / tm["bpm"]) <= end:
 
-                print("#MEASURE", str)
-                write_bar_data(tm, bar_data, begin, begin + beat_cnt * tpb)
+                tja_contents.append("#MEASURE"+str)
+                write_bar_data(tm, bar_data, begin, begin +
+                               beat_cnt * tpb, tja_contents)
                 delay_time = end - \
                     int(begin + 1.0 * beat_cnt * T_MINUTE / tm["bpm"])
                 assert delay_time >= 0, "DELAY FAULT %f" % delay_time
@@ -374,7 +375,7 @@ def write_incomplete_bar(tm, bar_data, begin, end):
                 # jiro will ignore delays short than 0.001s
                 # TODO: add up total epsilon!? and fix it later?
                 if delay_time >= 1:
-                    print(make_cmd(FMT_DELAY, delay_time/1000.0))
+                    tja_contents.append(make_cmd(FMT_DELAY, delay_time/1000.0))
                 return
 
     # Missing all, guess a measure here!
@@ -389,16 +390,17 @@ def write_incomplete_bar(tm, bar_data, begin, end):
         denominator *= fix_mul
         numerator *= fix_mul
 
-    print("//[Warning] This may be erronous!!")
-    print(make_cmd(MEASURE, numerator, denominator))
-    write_bar_data(tm, bar_data, begin, begin + min_beat_cnt * tpb)
+    tja_contents.append("//[Warning] This may be erronous!!")
+    tja_contents.append(make_cmd(MEASURE, numerator, denominator))
+    write_bar_data(tm, bar_data, begin, begin +
+                   min_beat_cnt * tpb, tja_contents)
     delay_time = end - int(begin + 1.0 * min_beat_cnt * T_MINUTE / tm["bpm"])
     if delay_time >= 1:
-        print(make_cmd(DELAY, delay_time / 1000.0))
+        tja_contents.append(make_cmd(DELAY, delay_time / 1000.0))
     return
 
 
-def write_bar_data(tm, bar_data, begin, end):
+def write_bar_data(tm, bar_data, begin, end, tja_contents):
     global show_head_info
     global combo_cnt, tail_fix
     global commands_within
@@ -414,7 +416,7 @@ def write_bar_data(tm, bar_data, begin, end):
 
     if abs(delta_list[-1]) < 1:
         tail_fix = True
-        write_bar_data(tm, bar_data[:-1], begin, end)
+        write_bar_data(tm, bar_data[:-1], begin, end, tja_contents)
         return
 
     ret_str = ""
@@ -452,31 +454,33 @@ def write_bar_data(tm, bar_data, begin, end):
     if show_head_info:  # show debug info?
         ret_str = head + ret_str
 
-    print(ret_str + ',')
+    tja_contents.append(ret_str + ',')
 
     for note, offset in bar_data:
         if note in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
             combo_cnt += 1
 
 
-def osu2tja(filename):
+def osu2tja(fp, course, level, audio_name):
     global slider_velocity, timingpoints
     global balloons, tail_fix, ignore_format_ver
     global osu_format_ver
     global commands_within
     global taiko_mode
 
+    tja_heads = list()
+    tja_contents = list()
     # check filename
-    if not filename.lower().endswith(".osu"):
-        print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename)
-        return False
+    # if not filename.lower().endswith(".osu"):
+    #    print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename)
+    #    return False
 
     # try to open file
-    try:
-        fp = codecs.open(filename, "r", "utf8")
-    except IOError:
-        print("Can't open file `%s`" % filename)
-        return False
+    # try:
+    #    fp = codecs.open(filename, "r", "utf8")
+    # except IOError:
+    #    print("Can't open file `%s`" % filename)
+    #    return False
 
     # data structures to hold information
     audio = ""
@@ -492,7 +496,8 @@ def osu2tja(filename):
     osu_ver_str = ""
     curr_sec = ""
     # read data
-    for line in fp:
+    lines = fp.readlines()
+    for line in lines:
         line = line.strip()
         if line == "":
             continue
@@ -592,23 +597,23 @@ def osu2tja(filename):
     bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
 
     bar_cnt = 1
-    print("TITLE:%s" % title.encode("shift-jis"))
-    print("SUBTITLE:%s" % (subtitle or artist).encode("shift-jis"))
-    print("WAVE:%s" % audio)
-    print("BPM:%.2f" % timingpoints[0]["bpm"])
-    print("OFFSET:-%.3f" % (timingpoints[0]["offset"] / 1000.0))
-    print("DEMOSTART:%.3f" % (preview / 1000.0))
+    tja_heads.append("TITLE:%s" % title)
+    tja_heads.append("SUBTITLE:%s" % (subtitle or artist))
+    tja_heads.append("WAVE:%s" % audio_name)
+    tja_heads.append("BPM:%.2f" % timingpoints[0]["bpm"])
+    tja_heads.append("OFFSET:-%.3f" % (timingpoints[0]["offset"] / 1000.0))
+    tja_heads.append("DEMOSTART:%.3f" % (preview / 1000.0))
 
-    print()
-    print("COURSE:3")  # TODO: GUESS DIFFICULTY
-    print("LEVEL:9")  # TODO: GUESS LEVEL
-	
+    tja_contents.append("")
+    tja_contents.append("COURSE:%s" % course)  # TODO: GUESS DIFFICULTY
+    tja_contents.append("LEVEL:%d" % level)  # TODO: GUESS LEVEL
+
     # don't write score init and score diff
     # taiko jiro will calculate score automatically
-    print("BALLOON:%s" % ','.join(map(repr, balloons)))
+    tja_contents.append("BALLOON:%s" % ','.join(map(repr, balloons)))
 
-    print()
-    print("#START")
+    tja_contents.append("")
+    tja_contents.append("#START")
 
     def is_new_measure(timing_point):
         bpm = timing_point["bpm"]
@@ -618,7 +623,7 @@ def osu2tja(filename):
     # check if all notes align ok
     for ho1, ho2 in zip(hitobjects[:-1], hitobjects[1:]):
         if ho2[1] <= ho1[1]:
-            print(ho1)
+            tja_contents.append(ho1)
 
     while obj_idx < len(hitobjects):
         # get next object to process
@@ -646,20 +651,21 @@ def osu2tja(filename):
             # write_a_measure()
             if int(end) == int(bar_offset_begin + bar_max_length):
                 tm = get_base_timing_point(timingpoints, bar_offset_begin)
-                write_bar_data(tm, bar_data, bar_offset_begin, end)
+                write_bar_data(tm, bar_data, bar_offset_begin,
+                               end, tja_contents)
                 bar_data = []
                 bar_cnt += 1
                 bar_offset_begin = get_real_offset(end)
                 bar_max_length = measure * time_per_beat
             elif int(end) == next_measure_offset:  # collect an incomplete bar?
                 write_incomplete_bar(get_base_timing_point(timingpoints, bar_offset_begin),
-                                     bar_data, bar_offset_begin, end)
+                                     bar_data, bar_offset_begin, end, tja_contents)
                 bar_data = []
                 measure = timingpoints[tm_idx]["beats"]
                 if timingpoints[tm_idx]["redline"]:
                     curr_bpm = timingpoints[tm_idx]["bpm"]
                     bar_offset_begin = next_measure_offset
-                    print(make_cmd(FMT_BPMCHANGE, curr_bpm))
+                    tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
                 else:
                     bar_offset_begin = end
                 time_per_beat = (60 * 1000) / curr_bpm
@@ -672,7 +678,7 @@ def osu2tja(filename):
                     hitobjects[obj_idx] = new_obj
 
                 # add new commands
-                print(make_cmd(FMT_MEASURECHANGE, measure, 4))
+                tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
 
                 tm_idx += 1
             else:
@@ -688,10 +694,11 @@ def osu2tja(filename):
     # flush buffer
     if len(bar_data) > 0:
         write_bar_data(get_base_timing_point(timingpoints, bar_offset_begin),
-                       bar_data, bar_offset_begin, end)
+                       bar_data, bar_offset_begin, end, tja_contents)
 
-    print("#END")
-    print(WATER_MARK)
+    tja_contents.append("#END")
+    tja_contents.append(WATER_MARK)
+    return tja_heads, tja_contents
 
 
 if __name__ == "__main__":
