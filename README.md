@@ -1,18 +1,18 @@
 osz2tja
 =======
 
-osz2tja is a converter to convert OSU! beatmap to TJA, which is a common format supported by a series of Taiko Simulator.
+osz2tja is a program that converts osu!'s beatmaps to TJA, a standard format supported by many Taiko Simulators.
 
-**English**|[简体中文](README.zh-cn.md)
+**English** | [简体中文](README.zh-cn.md)
 
 ## Usage
 
-Just simply input the following command:
+Simply enter the following command in the terminal:
 ```
 python main.py <source .osz filename> <output path>
 ```
 
-osz2tja will read version files in .osz and exhibit all versions with their overall difficulties, like:
+osz2tja will read .osz version files and display all versions along with their overall difficulties, like:
 ```
 ====== Difficulty Selection ======
 Index  Difficulty  Version
@@ -25,10 +25,9 @@ Hard:
 Normal:
 Easy:
 ```
+Please follow the prompts to match the current beatmap's difficulties with the difficulies of a .tja file.
 
-Please follow the prompts to match the difficulty versions of OSU and difficulies of Taiko no Tatsujin.
+For example: If you want to match the "Insane" difficulty to the Oni difficulty, enter its index number (which is 0) after the "Oni:" prompt.
+If you don't want to convert a difficulty, enter "-1" in its prompt.
 
-For example, input "0" after the "Oni:" prompt if you want to match "xxxx(Insane)" version to Oni difficulty.
-Please input "-1" if you want to disable a difficulty.
-
-After matching, osz2tja will generate .tja file and extract audio file to the output path, with a new-created folder named after title.
+Following a successful match, osz2tja will generate a .tja file and extract the audio file to the output path, creating a new folder named after the title.
