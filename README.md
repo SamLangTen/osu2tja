@@ -7,7 +7,7 @@ osz2tja is a program that converts osu!'s beatmaps to TJA, a standard format sup
 
 ## Usage
 
-Simply enter the following command::
+Simply enter the following command in the terminal:
 ```
 python main.py <source .osz filename> <output path>
 ```
