@@ -1,9 +1,9 @@
 osz2tja
 =======
 
-osz2tja is a converter to convert OSU! beatmap to TJA, which is a common format supported by a series of Taiko Simulator.
+osz2tja is a program that converts OSU! beatmaps to TJA, a standard format supported by many Taiko Simulators.
 
-**English**|[简体中文](README.zh-cn.md)
+**English** | [简体中文](README.zh-cn.md)
 
 ## Usage
 
