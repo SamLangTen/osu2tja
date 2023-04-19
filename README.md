@@ -27,7 +27,7 @@ Easy:
 ```
 Please follow the prompts to match the current beatmap's difficulties with the difficulies of a .tja file.
 
-For example: If you want to match the "Insane" difficulty to the Oni difficulty, enter it's index number (which is 0) after the "Oni:" prompt.
+For example: If you want to match the "Insane" difficulty to the Oni difficulty, enter its index number (which is 0) after the "Oni:" prompt.
 If you don't want to convert a difficulty, enter "-1" in its prompt.
 
 Following a successful match, osz2tja will generate a .tja file and extract the audio file to the output path, creating a new folder named after the title.
